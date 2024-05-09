@@ -1,9 +1,12 @@
 import express from "express"
 
 const FormRouter = express.Router()
-import mysql from 'mysql2'
+import mysql, { raw } from 'mysql2'
 import { Human } from "../interfaces/forms"
 import { dbConnect } from "../config"
+import multer from "multer"
+import path from "path"
+import { v4 as uuidv4 } from 'uuid';
 
 const connection = mysql.createConnection(dbConnect)
 
@@ -16,34 +19,53 @@ connection.connect((err) => {
 })
 
 
-FormRouter.post('/create', async (req, res) => {
-    console.log(req.body);
-        
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, './static/form_img/')
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuf = uuidv4();
+        cb(null, uniqueSuf +`${path.extname(file.originalname)}` );
   
-    let body = req.body;
-    let formType: number = body.human == true ? 1 : 0
 
-
-
-    if (formType == 1) {
-        let sqlHuman: string = 'insert into human_forms(human, firstName, secondName, lastName, peculiarity, description, img, time,found)';
-        let valueHuman: string = ` values("${body.human == true ? 1 : 0}", "${body.firstName}","${body.secondName}", "${body.lastName}"," ${body.peculiarity}", "${body.description}", "${body.img}","${body.date}", "0")`
-
-        connection.execute(sqlHuman + valueHuman, (err, result, fields) => {err? console.log(err): res.status(200).json({message: 'успешно', result})})
-  
-       
 
     }
+})
+const upload = multer({ storage })
 
-    if (formType == 0) {
-        let sqlAnimal: string = 'insert into animal_forms(human, nick, peculiarity, description, img, time,found)';
-        let valueAnimal: string = ` values("${body.human == true ? 1 : 0}", "${body.nick}", "${body.peculiarity}", "${body.description}", "${body.img}","${body.date}", ${body.found == true ? 1 : 0})`
-
-        connection.execute(sqlAnimal + valueAnimal, (err, result, fields) => { console.log(err); })
-        connection.execute('select * from animal_forms', (err, result, fields) => { res.send(result) })
+FormRouter.post('/create', upload.array('files',5), async (req, res) => {
+    const pathArr: string[] = []
+    let files:any = req.files;
+    for (const item of files) {
+        pathArr.push(item.path.slice(6))
+   }
+   console.log(req.body);
    
-    }
+   
+       let body = req.body;
+       let formType: number = body.human == 'true' ? 1 : 0
+   
+   
+   
+       if (formType == 1) {
+           let sqlHuman: string = 'insert into human_forms(human, firstName, secondName, lastName, peculiarity, description, img, time,found)';
+           let valueHuman: string = ` values("${body.human == true ? 1 : 0}", "${body.firstName}","${body.secondName}", "${body.lastName}"," ${body.peculiarity}", "${body.description}", "${pathArr}","${body.timeWTF}", "0")`
+   
+           connection.execute(sqlHuman + valueHuman, (err, result, fields) => {err? console.log(err): res.status(200).json({message: 'успешно', result})})
+     
+          
+   
+       }
+   
+       if (formType == 0) {
+           let sqlAnimal: string = 'insert into animal_forms(human, nick, peculiarity, description, img, time,found)';
+           let valueAnimal: string = ` values("${body.human == true ? 1 : 0}", "${body.nick}", "${body.peculiarity}", "${body.description}", "${body.img}","${body.date}", ${body.found == true ? 1 : 0})`
+   
+           connection.execute(sqlAnimal + valueAnimal, (err, result, fields) => { console.log(err); })
 
+      
+       }
+   
 
 
 
@@ -77,7 +99,7 @@ FormRouter.get('/get', async (req, res) => {
             });
 
         });
-        
+
 
     }
 

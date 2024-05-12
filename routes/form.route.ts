@@ -36,11 +36,14 @@ const upload = multer({ storage })
 FormRouter.post('/create', upload.array('files',5), async (req, res) => {
     const pathArr: string[] = []
     let files:any = req.files;
+    console.log(files);
+    
     for (const item of files) {
-        pathArr.push(item.path.slice(6))
+       /*  pathArr.push(item.path.slice(6)) */
+       pathArr.push(item.destination.slice(8) + item.filename)
    }
-   console.log(req.body);
-   
+
+ 
    
        let body = req.body;
        let formType: number = body.human == 'true' ? 1 : 0
@@ -50,6 +53,7 @@ FormRouter.post('/create', upload.array('files',5), async (req, res) => {
        if (formType == 1) {
            let sqlHuman: string = 'insert into human_forms(human, firstName, secondName, lastName, peculiarity, description, img, time,found)';
            let valueHuman: string = ` values("${body.human == true ? 1 : 0}", "${body.firstName}","${body.secondName}", "${body.lastName}"," ${body.peculiarity}", "${body.description}", "${pathArr}","${body.timeWTF}", "0")`
+
    
            connection.execute(sqlHuman + valueHuman, (err, result, fields) => {err? console.log(err): res.status(200).json({message: 'успешно', result})})
      

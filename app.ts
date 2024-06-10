@@ -4,6 +4,9 @@ import { AuthRoute } from "./routes/auth.route";
 import formData from 'express-form-data'
 import cors from 'cors'
 
+
+
+
 const app = express();
 
 formData.parse()

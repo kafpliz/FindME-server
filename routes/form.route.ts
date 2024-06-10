@@ -1,8 +1,7 @@
 import express from "express"
 
 const FormRouter = express.Router()
-import mysql, { raw } from 'mysql2'
-import { Human } from "../interfaces/forms"
+import mysql from 'mysql2'
 import { dbConnect } from "../config"
 import multer from "multer"
 import path from "path"
@@ -10,13 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const connection = mysql.createConnection(dbConnect)
 
-connection.connect((err) => {
-    if (err) {
-        return console.error("Ошибка: " + err.message);
-    } else {
-        console.log('Connected... form')
-    }
-})
+
 
 
 const storage = multer.diskStorage({
@@ -33,10 +26,12 @@ const storage = multer.diskStorage({
 })
 const upload = multer({ storage })
 
-FormRouter.post('/create', upload.array('files',5), async (req, res) => {
+FormRouter.post('/create', upload.array('files',5), async (req, res) => {   
+  
+    
     const pathArr: string[] = []
     let files:any = req.files;
-    console.log(files);
+  
     
     for (const item of files) {
        /*  pathArr.push(item.path.slice(6)) */
@@ -55,17 +50,19 @@ FormRouter.post('/create', upload.array('files',5), async (req, res) => {
            let valueHuman: string = ` values("${body.human == true ? 1 : 0}", "${body.firstName}","${body.secondName}", "${body.lastName}"," ${body.peculiarity}", "${body.description}", "${pathArr}","${body.timeWTF}", "0")`
 
    
-           connection.execute(sqlHuman + valueHuman, (err, result, fields) => {err? console.log(err): res.status(200).json({message: 'успешно', result})})
+           connection.execute(sqlHuman + valueHuman, (err, result, fields) => {err? console.log(err): res.status(200).json({message: 'успешно',status: 200})})
      
           
    
        }
    
        if (formType == 0) {
+      
+        
            let sqlAnimal: string = 'insert into animal_forms(human, nick, peculiarity, description, img, time,found)';
-           let valueAnimal: string = ` values("${body.human == true ? 1 : 0}", "${body.nick}", "${body.peculiarity}", "${body.description}", "${body.img}","${body.date}", ${body.found == true ? 1 : 0})`
+           let valueAnimal: string = ` values("${body.human == true ? 1 : 0}", "${body.nick}", "${body.peculiarity}", "${body.description}", "${pathArr}","${body.timeWTF}", "0")`
    
-           connection.execute(sqlAnimal + valueAnimal, (err, result, fields) => { console.log(err); })
+           connection.execute(sqlAnimal + valueAnimal, (err, result, fields) => { err? console.log(err): res.status(200).json({message: 'Успешно добавлено',status: 200})})
 
       
        }
@@ -78,7 +75,7 @@ FormRouter.post('/create', upload.array('files',5), async (req, res) => {
 FormRouter.get('/get', async (req, res) => {
     let query = req.query;
     let arr: any[] = [];
-    console.log(query);
+   
 
     if (query.type == 'human') {
         connection.execute('select * from human_forms', (err, result, fields) => { res.json(result) })

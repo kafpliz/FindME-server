@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs'
 import nodemailer from 'nodemailer'
 import dotenv from 'dotenv';
 import { generateAccessToken, generateRefreshToken } from '../tokens/token';
-import { generateRandomNumber, layoutLetters } from '../utils/allUtils';
+import { forgotPasswordTemplate, generatePassword, generateRandomNumber, layoutLetters } from '../utils/allUtils';
 dotenv.config();
 
 const connection = mysql.createConnection(dbConnect)
@@ -54,34 +54,36 @@ class AuthControllerRoute {
         try {
             const { nick, password } = req.body;
 
-
+            console.log(req.body);
+            
             connection.execute(`select * from users where nick like "${nick}"`, (err, result: any, field) => {
-
-
-                if (result.length != 0) {
-
-
-                    const validPassword = bcrypt.compareSync(password, result[0].password)
-                    if (!validPassword) {
-                        return res.json({ message: 'Неверный пароль', status: 400 })
-                    }
-                    const token = { accessToken: generateAccessToken(result[0].id, result[0].nick), refreshToken: generateRefreshToken(result[0].id, result[0].nick) }
-                    return res.json({ token, message: 'Успешный логин', status: 200 })
-
-                } else {
-                    res.json({ message: 'Такой пользователь не зарегестрирован!', status: 500 })
+                if(err){
+                    console.log(err);  
                 }
+
+                if (result.length == 0) {
+                    return res.json({ message: 'Такой пользователь не зарегестрирован!', status: 500 })
+                }
+
+
+                const validPassword = bcrypt.compareSync(password, result[0].password)
+                if (!validPassword) {
+                    return res.json({ message: 'Неверный пароль', status: 400 })
+                }
+                const token = { accessToken: generateAccessToken(result[0].id, result[0].nick), refreshToken: generateRefreshToken(result[0].id, result[0].nick) }
+                return res.json({ token, message: 'Успешный логин', status: 200 })
 
             })
 
 
         } catch (error) {
-            console.log(error);
-
+            console.log(error)
         }
     }
     async getUser(req: any, res: any) {
         connection.execute(`select * from users where id like "${req.user.id}"`, (err, result: any, field) => {
+            console.log(result[0].avatar);
+            
             const newData = {
                 id: result[0].id,
                 firstName: result[0].firstName,
@@ -111,20 +113,53 @@ class AuthControllerRoute {
     async updateUser(req: any, res: any) {
         let body = req.body
         let filePath: string | boolean = req.files.length == 0 ? false : req.files[0].destination.slice(8) + req.files[0].filename
+        let confirmPassword = req.body.confirmPassword.length == 0 ? false : req.body.confirmPassword
+        let newPassword = req.body.newPassword.length == 0 ? false : req.body.newPassword
+        
 
-        let sqlQuery = 'update users set ' + (body.editFirstName ? `firstName='${body.editFirstName}',` : '') + (body.editLastName ? `lastName='${body.editLastName}',` : '') +
-            (body.editEmail ? `email='${body.editEmail}',` : '') + (body.editDescription ? `description='${body.editDescription}',` : '') + (body.editSecondName ? `secondName='${body.editSecondName}',` : '') +
-            (body.editPhone ? `phone='${body.editPhone}',` : '') + (body.socialLinks ? `socialLinks='${body.socialLinks}'` : '') + (filePath == false ? '' : `,avatar='${filePath}'`) + ` where nick = '${body.userNick}'`;
 
-        connection.execute(sqlQuery,
-            (err, result: any, field) => {
-                if (err) {
-                    console.log(err);
-                    return res.json({ status: 400, message: 'Ошибка' })
-                } else {
-                    res.json({ status: 200, message: 'Успешно обновлено' })
+        if (confirmPassword && newPassword) {
+            connection.execute(`select * from users where id = "${req.user.id}"`, (err, result: any, field) => {
+                const validPassword = bcrypt.compareSync(confirmPassword, result[0].password)
+                if (!validPassword) {
+                    return res.json({ message: 'Неверный пароль', status: 400 })
                 }
+                console.log('newpass', newPassword);
+                const hashPassword = bcrypt.hashSync(newPassword, 7)
+                console.log(hashPassword);
+                let sqlQuery = 'update users set ' + (body.editFirstName ? `firstName='${body.editFirstName}',` : '') + (body.editLastName ? `lastName='${body.editLastName}',` : '') +
+                    (body.editEmail ? `email='${body.editEmail}',` : '') + (body.editDescription ? `description='${body.editDescription}',` : '') + (body.editSecondName ? `secondName='${body.editSecondName}',` : '') +
+                    (body.editPhone ? `phone='${body.editPhone}',` : '') + (body.socialLinks ? `socialLinks='${body.socialLinks}'` : '') + (filePath == false ? '' : `,avatar='${filePath}'`) + (`,password = "${hashPassword}"`) + ` where id = '${req.user.id}'`;
+
+                connection.execute(sqlQuery,
+                    (err, result: any, field) => {
+                        if (err) {
+                            console.log(err);
+                            return res.json({ status: 400, message: 'Ошибка' })
+                        } else {
+                            res.json({ status: 200, message: 'Успешно обновлено' })
+                        }
+                    })
             })
+
+
+        } else {
+            let sqlQuery = 'update users set ' + (body.editFirstName ? `firstName='${body.editFirstName}',` : '') + (body.editLastName ? `lastName='${body.editLastName}',` : '') +
+                (body.editEmail ? `email='${body.editEmail}',` : '') + (body.editDescription ? `description='${body.editDescription}',` : '') + (body.editSecondName ? `secondName='${body.editSecondName}',` : '') +
+                (body.editPhone ? `phone='${body.editPhone}',` : '') + (body.socialLinks ? `socialLinks='${body.socialLinks}'` : '') + (filePath == false ? '' : `,avatar='${filePath}'`) + ` where nick = '${body.userNick}'`;
+
+            connection.execute(sqlQuery,
+                (err, result: any, field) => {
+                    if (err) {
+                        console.log(err);
+                        return res.json({ status: 400, message: 'Ошибка' })
+                    } else {
+                        res.json({ status: 200, message: 'Успешно обновлено' })
+                    }
+                })
+        }
+
+
 
 
     }
@@ -214,25 +249,28 @@ class AuthControllerRoute {
 
 
     }
-    async confirmEmail(req: any, res: any) {
+    async confirmEmail(req: any, res: any) { 
         console.log('confirmEmail');
         let code = req.body.code
         console.log(code);
+        console.log(req.body);
         const data = req.user
-        connection.execute(`select emailCode from users where id ="${data.id}"`, (err, result: any, field) => {
-            console.log();
-            if (code == result[0].emailCode) {
-                connection.execute(`update users set confirmEmail="1" where id ="${data.id}"`)
-                res.json({ status: 200, message: 'Почта успешно подтверждена!' })
-            } else {
-                connection.execute(`update users set confirmEmail="0" where id ="${data.id}"`)
-                res.json({ status: 400, message: 'Неверный код!' })
-            }
-        })
+                connection.execute(`select emailCode from users where id ="${data.id}"`, (err, result: any, field) => {
+                    console.log();
+                    if (code == result[0].emailCode) {
+                        connection.execute(`update users set confirmEmail="1" where id ="${data.id}"`)
+                        res.json({ status: 200, message: 'Почта успешно подтверждена!' })
+                    } else {
+                        connection.execute(`update users set confirmEmail="0" where id ="${data.id}"`)
+                        res.json({ status: 400, message: 'Неверный код!' })
+                    }
+                })
 
     }
     async getTips(req: any, res: any) {
         console.log('tips', 200);
+        console.log(req.body);
+        
         let tips = req.body.tips
         connection.execute(`select id, nick, avatar from users where nick LIKE '${tips}%'`, (err, result: any, field) => {
             if (err) {
@@ -264,16 +302,74 @@ class AuthControllerRoute {
 
     }
     async publicUsers(req: any, res: any) {
-   
+
         const options = 'avatar, firstName, lastName, secondName, description, email, socialLinks'
-        connection.execute(`select ${options} from users where public = 1`,  (err, result: any, field)=> {
-          if(err){
-            res.json({status: 400, err})
-          } else {
-            res.json({status: 200, data: result})
-          }
-            
+        connection.execute(`select ${options} from users where public = 1`, (err, result: any, field) => {
+            if (err) {
+                res.json({ status: 400, err })
+            } else {
+                res.json({ status: 200, data: result })
+            }
+
         })
+    }
+
+    async updateUserPassword(req: any, res: any) {
+        try {
+            if (!req.body.email) {
+                return res.status(401).json({ message: "Вы не ввели почту!" })
+            }
+            let email = req.body.email
+            connection.execute(`select * from users where email = "${email}"`, (err, result: any, field) => {
+                if (result.length == 0) {
+
+                    return res.json({ message: "Такой почты не найдено в базе!", status: 400 })
+
+                }
+                let newPassword = generatePassword(0, 16)
+
+                let transporter = nodemailer.createTransport({
+                    service: 'Gmail',
+                    auth: {
+                        user: process.env.USER,
+                        pass: process.env.PASSWORD
+                    }
+                });
+                let mailOptions = {
+                    from: process.env.USER,
+                    to: email,
+                    subject: 'Смена пароля',
+                    html: forgotPasswordTemplate(newPassword),
+                };
+                const hashPassword = bcrypt.hashSync(newPassword, 7)
+
+
+                connection.execute(`update users set password = '${hashPassword}' where email = '${email}'`, (err, result, field) => {
+                    if (err) {
+                        console.log(err);
+                    } else {
+                        console.log('успешно');
+
+                        transporter.sendMail(mailOptions, function (error, info) {
+                            if (error) {
+                                console.log(error);
+                            }
+                        });
+                        return res.json({ message: "Пароль отправлен на почту!", status: 200 })
+                    }
+
+                })
+
+
+
+
+
+            })
+
+        } catch (error) {
+            console.log(error);
+            res.status(400).json({ message: "Ошибка при попытке сброса пароля!", error })
+        }
     }
 }
 

@@ -48,6 +48,10 @@ AuthRoute.post('/login', [
     body('nick', 'Имя юзера не может быть пустым').notEmpty(),
     body('password', 'Пароль должен быть длинее 4-ёх символов, но меньше 12-ти').isLength({ min: 4, max: 12 })
 ], controller.login)
+AuthRoute.post('/fogortPassword', [
+    body('email', 'Введите корректный email').isEmail(),
+  
+], controller.updateUserPassword)
 
 AuthRoute.post('/getUser', auth, controller.getUser)
 AuthRoute.post('/users', auth, controller.users)
@@ -57,7 +61,7 @@ AuthRoute.post('/sendEmailCode', auth, controller.sendEmailCode)
 AuthRoute.post('/confirmEmail', auth, controller.confirmEmail)
 AuthRoute.post('/tips', auth, controller.getTips)
 AuthRoute.post('/setPublicProfile', auth, controller.setPublicProfile)
-AuthRoute.post('/publicUsers', auth, controller.publicUsers)
+AuthRoute.post('/publicUsers',  controller.publicUsers)
 
 
 

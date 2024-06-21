@@ -9,7 +9,7 @@ const connection = mysql.createConnection(dbConnect)
 
 export let generateAccessToken = (id: number, userNick: string,) => {
     const payload = { id, userNick }
-    const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET || '', { expiresIn: '30m' })
+    const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET || '', { expiresIn: '7m' })
     return accessToken
     
 
@@ -22,5 +22,6 @@ export let generateRefreshToken = (id: number, userNick: string,) => {
     })
     return refreshToken
 }
+
 
 

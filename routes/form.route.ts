@@ -73,6 +73,8 @@ FormRouter.post('/create', upload.array('files',5), async (req, res) => {
 })
 
 FormRouter.get('/get', async (req, res) => {
+    console.log('form gget');
+    
     let query = req.query;
     let arr: any[] = [];
    

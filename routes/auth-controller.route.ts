@@ -33,7 +33,7 @@ class AuthControllerRoute {
                     const user = `values("${firstName}", "${lastName}", "${nickname}", "${email}", "${hashPassword}", "${secondName}")`;
                     connection.execute(sql + user, (err, result: any, fields) => {
                         connection.execute(`select * from users where nick like "${nickname}"`, (err, result: any, fields) => {
-                            res.json({ message: "Успешно зарегестрирован", status: 200, token: generateAccessToken(result[0].id, result[0].nick) })
+                            res.json({ message: "Успешно зарегестрирован", status: 200, token: { accessToken: generateAccessToken(result[0].id, result[0].nick, result[0].roles), refreshToken: generateRefreshToken(result[0].id, result[0].nick, result[0].roles) } })
                         })
 
 
@@ -55,10 +55,10 @@ class AuthControllerRoute {
             const { nick, password } = req.body;
 
             console.log(req.body);
-            
+
             connection.execute(`select * from users where nick like "${nick}"`, (err, result: any, field) => {
-                if(err){
-                    console.log(err);  
+                if (err) {
+                    console.log(err);
                 }
 
                 if (result.length == 0) {
@@ -70,7 +70,7 @@ class AuthControllerRoute {
                 if (!validPassword) {
                     return res.json({ message: 'Неверный пароль', status: 400 })
                 }
-                const token = { accessToken: generateAccessToken(result[0].id, result[0].nick), refreshToken: generateRefreshToken(result[0].id, result[0].nick) }
+                const token = { accessToken: generateAccessToken(result[0].id, result[0].nick, result[0].roles), refreshToken: generateRefreshToken(result[0].id, result[0].nick, result[0].roles) }
                 return res.json({ token, message: 'Успешный логин', status: 200 })
 
             })
@@ -82,8 +82,6 @@ class AuthControllerRoute {
     }
     async getUser(req: any, res: any) {
         connection.execute(`select * from users where id like "${req.user.id}"`, (err, result: any, field) => {
-            console.log(result[0].avatar);
-            
             const newData = {
                 id: result[0].id,
                 firstName: result[0].firstName,
@@ -115,7 +113,7 @@ class AuthControllerRoute {
         let filePath: string | boolean = req.files.length == 0 ? false : req.files[0].destination.slice(8) + req.files[0].filename
         let confirmPassword = req.body.confirmPassword.length == 0 ? false : req.body.confirmPassword
         let newPassword = req.body.newPassword.length == 0 ? false : req.body.newPassword
-        
+
 
 
         if (confirmPassword && newPassword) {
@@ -249,28 +247,28 @@ class AuthControllerRoute {
 
 
     }
-    async confirmEmail(req: any, res: any) { 
+    async confirmEmail(req: any, res: any) {
         console.log('confirmEmail');
         let code = req.body.code
         console.log(code);
         console.log(req.body);
         const data = req.user
-                connection.execute(`select emailCode from users where id ="${data.id}"`, (err, result: any, field) => {
-                    console.log();
-                    if (code == result[0].emailCode) {
-                        connection.execute(`update users set confirmEmail="1" where id ="${data.id}"`)
-                        res.json({ status: 200, message: 'Почта успешно подтверждена!' })
-                    } else {
-                        connection.execute(`update users set confirmEmail="0" where id ="${data.id}"`)
-                        res.json({ status: 400, message: 'Неверный код!' })
-                    }
-                })
+        connection.execute(`select emailCode from users where id ="${data.id}"`, (err, result: any, field) => {
+            console.log();
+            if (code == result[0].emailCode) {
+                connection.execute(`update users set confirmEmail="1" where id ="${data.id}"`)
+                res.json({ status: 200, message: 'Почта успешно подтверждена!' })
+            } else {
+                connection.execute(`update users set confirmEmail="0" where id ="${data.id}"`)
+                res.json({ status: 400, message: 'Неверный код!' })
+            }
+        })
 
     }
     async getTips(req: any, res: any) {
         console.log('tips', 200);
         console.log(req.body);
-        
+
         let tips = req.body.tips
         connection.execute(`select id, nick, avatar from users where nick LIKE '${tips}%'`, (err, result: any, field) => {
             if (err) {
@@ -313,7 +311,6 @@ class AuthControllerRoute {
 
         })
     }
-
     async updateUserPassword(req: any, res: any) {
         try {
             if (!req.body.email) {
@@ -371,6 +368,17 @@ class AuthControllerRoute {
             res.status(400).json({ message: "Ошибка при попытке сброса пароля!", error })
         }
     }
+    async moderateBlank(req: any, res: any) {
+     
+        let user = req.user
+        if(user.roles === 'admin'){
+            connection.execute('select * from human_forms where isModerate = 0', (err, result, fields) => { res.json({status: 200, message: 'Модерация заявок', data: result}) })
+            
+        } else {
+            return res.json({message: 'Вы не админ!', status: 401})
+        }
+    }
+
 }
 
 let controller = new AuthControllerRoute()

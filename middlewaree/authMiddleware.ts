@@ -19,14 +19,12 @@ const auth = (req: any, res: any, next: any) => {
     const JWT_REFRESH_SECRET: string = process.env.JWT_REFRESH_SECRET || '';
     try {
 
-        console.log('аксес', accessToken);
+     
 
 
         if (accessToken) {
             const decodedData = jwt.verify(accessToken, JWT_ACCESS_SECRET)
-
             req.user = decodedData;
-            console.log(200, 'аксес есть');
             next()
         } 
 
@@ -41,21 +39,17 @@ const auth = (req: any, res: any, next: any) => {
                 const decodedData = jwt.verify(refreshToken, JWT_REFRESH_SECRET)
                 let param: string | any = decodedData
                 let userId = param.id
-                console.log('рефреш есть');
 
                 connection.execute(`select * from users where id = ${param.id}`, (err, result: any, fields) => {
-                    console.log('1)',refreshToken);
-                    console.log('2)',result[0].refreshToken);
-                    
+                   
                     if (refreshToken == result[0].refreshToken) {
                         console.log(200, 'равны');
                         try {
-                            let refreshToken = generateRefreshToken(result[0].id, result[0].nick);
+                            let refreshToken = generateRefreshToken(result[0].id, result[0].nick, result[0].roles);
                             connection.execute(`update users set refreshToken=? where id =?`, [refreshToken, userId])
-                            console.log(205, 'равны');
                             let options = { 
                                 message: 'Перезапустите приложение', 
-                                tokens: { accessToken: generateAccessToken(result[0].id, result[0].nick), refreshToken: refreshToken },
+                                tokens: { accessToken: generateAccessToken(result[0].id, result[0].nick,result[0].roles), refreshToken: refreshToken },
                                 status: 205 
                             }
                             console.log(options);

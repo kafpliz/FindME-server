@@ -80,11 +80,11 @@ FormRouter.get('/get', async (req, res) => {
    
 
     if (query.type == 'human') {
-        connection.execute('select * from human_forms', (err, result, fields) => { res.json(result) })
+        connection.execute('select * from human_forms where isModerate = 1', (err, result, fields) => { res.json(result) })
     } else if (query.type == 'animal') {
-        connection.execute('select * from animal_forms', (err, result, fields) => { res.json(result) })
+        connection.execute('select * from animal_forms where isModerate = 1', (err, result, fields) => { res.json(result) })
     } else if (!query.type) {
-        connection.execute('SELECT * FROM human_forms', (err, humanResult: any, fields) => {
+        connection.execute('SELECT * FROM human_forms where isModerate = 1', (err, humanResult: any, fields) => {
             if (err) { console.log(err); return }
             for (let i = 0; i < humanResult.length; i++) {
                 arr.push(humanResult[i])

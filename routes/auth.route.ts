@@ -61,9 +61,9 @@ AuthRoute.post('/sendEmailCode', auth, controller.sendEmailCode)
 AuthRoute.post('/confirmEmail', auth, controller.confirmEmail)
 AuthRoute.post('/tips', auth, controller.getTips)
 AuthRoute.post('/setPublicProfile', auth, controller.setPublicProfile)
-AuthRoute.post('/moderateBlank', auth, controller.moderateBlank)
 AuthRoute.post('/publicUsers',  controller.publicUsers)
-
+AuthRoute.post('/moderateBlank', auth, controller.moderateBlank)
+AuthRoute.post('/approvedBlank', auth, controller.approvedBlank)
 
 
 export { AuthRoute }

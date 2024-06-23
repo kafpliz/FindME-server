@@ -369,14 +369,30 @@ class AuthControllerRoute {
         }
     }
     async moderateBlank(req: any, res: any) {
-     
         let user = req.user
-        if(user.roles === 'admin'){
-            connection.execute('select * from human_forms where isModerate = 0', (err, result, fields) => { res.json({status: 200, message: 'Модерация заявок', data: result}) })
-            
+        if (user.roles === 'admin') {
+            connection.execute('select * from human_forms where isModerate = 0', (err, result, fields) => { res.json({ status: 200, message: 'Модерация заявок', data: result }) })
+
         } else {
-            return res.json({message: 'Вы не админ!', status: 401})
+            return res.json({ message: 'Вы не админ!', status: 401 })
         }
+    }
+    async approvedBlank(req: any, res: any) {
+        let blankID = req.body.id
+        console.log(blankID);
+        if (blankID) {
+            connection.execute(`update human_forms set isModerate = 1 where id=${blankID}`, (err, result, fields) => {
+                if (err) {
+                    console.log(err);
+                    res.json({ status: 401, message: 'Ошибка при одобрение анкеты!' })
+
+                } else {
+                    res.json({ status: 200, message: 'Успешно добавлена!' })
+                }
+            })
+
+        }
+    
     }
 
 }

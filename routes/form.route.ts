@@ -27,14 +27,21 @@ const storage = multer.diskStorage({
 const upload = multer({ storage })
 
 FormRouter.post('/create', upload.array('files',5), async (req, res) => {   
+    let dateString = req.body.timeWTF
+    const date = new Date(dateString);
+    const unixDate = Math.floor(date.getTime() / 1000);
+    req.body.timeWTF = unixDate
+
   
+
+ 
     
     const pathArr: string[] = []
     let files:any = req.files;
   
     
     for (const item of files) {
-       /*  pathArr.push(item.path.slice(6)) */
+       
        pathArr.push(item.destination.slice(8) + item.filename)
    }
 
@@ -73,8 +80,6 @@ FormRouter.post('/create', upload.array('files',5), async (req, res) => {
 })
 
 FormRouter.get('/get', async (req, res) => {
-    console.log('form gget');
-    
     let query = req.query;
     let arr: any[] = [];
    

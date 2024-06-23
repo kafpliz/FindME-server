@@ -8,8 +8,6 @@ dotenv.config();
 
 
 const auth = (req: any, res: any, next: any) => {
-    console.log('auth');
-
     if (req.method === "OPTIONS") {
         next()
     }
@@ -33,7 +31,7 @@ const auth = (req: any, res: any, next: any) => {
     } catch (error: any) {
         console.log('--------------------------------------');
         console.log(error);
-        if (error.message == 'jwt expired') {
+        if (error.message === 'jwt expired') {
             console.log(200)
             if (refreshToken) {
                 const decodedData = jwt.verify(refreshToken, JWT_REFRESH_SECRET)
@@ -52,7 +50,7 @@ const auth = (req: any, res: any, next: any) => {
                                 tokens: { accessToken: generateAccessToken(result[0].id, result[0].nick,result[0].roles), refreshToken: refreshToken },
                                 status: 205 
                             }
-                            console.log(options);
+                          
                             
                             return res.json(options)
                             

@@ -1,4 +1,4 @@
-import { body, validationResult } from 'express-validator';
+import { validationResult } from 'express-validator';
 import mysql from 'mysql2'
 import { dbConnect } from '../config';
 import bcrypt from 'bcryptjs'
@@ -6,9 +6,21 @@ import nodemailer from 'nodemailer'
 import dotenv from 'dotenv';
 import { generateAccessToken, generateRefreshToken } from '../tokens/token';
 import { forgotPasswordTemplate, generatePassword, generateRandomNumber, layoutLetters } from '../utils/allUtils';
+import { Sequelize } from 'sequelize'
+import { User } from '../models/allModels';
+
+const sequelize = new Sequelize(dbConnect.database, dbConnect.user, dbConnect.password, {
+    host: dbConnect.host,
+    dialect: 'mysql',
+    logging: false
+})
+
 dotenv.config();
 
 const connection = mysql.createConnection(dbConnect)
+
+
+
 
 
 class AuthControllerRoute {
@@ -20,30 +32,26 @@ class AuthControllerRoute {
             }
             const { firstName, lastName, email, password, nick, secondName } = req.body;
             let nickname: string = nick.toLowerCase();
+            sequelize.authenticate().then(() => { console.log('Успещно подклюено!'); return User.sync(); })
 
+            let candidate = await User.findOne({ where: { nick: nickname } })
 
+            if (candidate) {
+                return res.json({ message: "Пользователь с таким username уже существует!", status: 400 })
+            }
 
-            connection.execute(`select * from users where nick like "${nickname}"`, (err, result: any, fields) => {
-
-                if (result.length != 0) {
-                    res.send({ message: "Такой пользователь уже существует", status: 400 })
-                } else {
-                    const hashPassword = bcrypt.hashSync(password, 7)
-                    const sql = `insert into users( firstName, lastName, nick, email, password, secondName) `;
-                    const user = `values("${firstName}", "${lastName}", "${nickname}", "${email}", "${hashPassword}", "${secondName}")`;
-                    connection.execute(sql + user, (err, result: any, fields) => {
-                        connection.execute(`select * from users where nick like "${nickname}"`, (err, result: any, fields) => {
-                            res.json({ message: "Успешно зарегестрирован", status: 200, token: { accessToken: generateAccessToken(result[0].id, result[0].nick, result[0].roles), refreshToken: generateRefreshToken(result[0].id, result[0].nick, result[0].roles) } })
-                        })
-
-
-                    })
-
-                }
-            })
-
-
-
+            const hashPassword = bcrypt.hashSync(password, 7)
+            await User.create({
+                firstName,
+                lastName,
+                email,
+                password: hashPassword,
+                nick: nickname,
+                secondName,
+            }).then((user) => {
+                return res.json({ message: "Успешно зарегестрирован", status: 200, tokens: { accessToken: generateAccessToken(user.dataValues.id, user.dataValues.nick, user.dataValues.roles), refreshToken: generateRefreshToken(user.dataValues.id, user.dataValues.nick, user.dataValues.roles) } })
+            }
+            )
         } catch (error) {
             console.log(error);
             res.status(400).json({ message: "ошибка при регистрации", error })
@@ -53,27 +61,18 @@ class AuthControllerRoute {
     async login(req: any, res: any) {
         try {
             const { nick, password } = req.body;
-
-            console.log(req.body);
-
-            connection.execute(`select * from users where nick like "${nick}"`, (err, result: any, field) => {
-                if (err) {
-                    console.log(err);
-                }
-
-                if (result.length == 0) {
-                    return res.json({ message: 'Такой пользователь не зарегестрирован!', status: 500 })
-                }
-
-
-                const validPassword = bcrypt.compareSync(password, result[0].password)
-                if (!validPassword) {
-                    return res.json({ message: 'Неверный пароль', status: 400 })
-                }
-                const token = { accessToken: generateAccessToken(result[0].id, result[0].nick, result[0].roles), refreshToken: generateRefreshToken(result[0].id, result[0].nick, result[0].roles) }
-                return res.json({ token, message: 'Успешный логин', status: 200 })
-
-            })
+            let nickname:string = nick.toLowerCase()
+            let user = await User.findOne({where: {nick: nickname}})
+            if(!user){
+                return res.json({ message: 'Такой пользователь не зарегестрирован!', status: 500 })
+            } 
+            const validPassword = bcrypt.compareSync(password, user.dataValues.password)
+            if (!validPassword) {
+                return res.json({ message: 'Неверный пароль', status: 400 })
+            }
+            const tokens = { accessToken: generateAccessToken(user.dataValues.id, user.dataValues.nick, user.dataValues.roles), refreshToken: generateRefreshToken(user.dataValues.id, user.dataValues.nick, user.dataValues.roles) }
+            return res.json({ tokens, message: 'Успешный логин', status: 200 })
+          
 
 
         } catch (error) {
@@ -392,7 +391,7 @@ class AuthControllerRoute {
             })
 
         }
-    
+
     }
 
 }

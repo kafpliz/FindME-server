@@ -1,5 +1,4 @@
 import { validationResult } from 'express-validator';
-import mysql from 'mysql2'
 import { dbConnect } from '../config';
 import bcrypt from 'bcryptjs'
 import nodemailer from 'nodemailer'
@@ -17,7 +16,7 @@ const sequelize = new Sequelize(dbConnect.database, dbConnect.user, dbConnect.pa
 
 dotenv.config();
 
-const connection = mysql.createConnection(dbConnect)
+
 
 
 
@@ -158,10 +157,6 @@ class AuthControllerRoute {
             })
 
         }
-
-
-
-
     }
     async createTeam(req: any, res: any) {
         let body = req.body;
@@ -347,7 +342,6 @@ class AuthControllerRoute {
         let user = req.user
         if (user.roles === 'admin') {
             await FindBlank.findAll({where: {isModerate: false}}).then(data=> {
-               
                 return res.json({ status: 200, message: 'Модерация заявок', data})
             })
 
@@ -357,7 +351,6 @@ class AuthControllerRoute {
     }
     async approvedBlank(req: any, res: any) {
         let blankID = req.body.id
-   
         if (blankID) {
            await FindBlank.update({isModerate: true}, {
                 where: { id:blankID }
